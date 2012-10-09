@@ -4,6 +4,7 @@ class Database {
     /// author: David P Smith
     /// version: 1.0
     /// copyright http://creativecommons.org/licenses/by-sa/3.0/us/
+    /// repository: https://github.com/s33k3r/PSF/
     /// description: Database Class that Simplifies Database Connectivity
     /// ------------------------------------------------------------------------    
     // ------------------------------------------------------------------------
