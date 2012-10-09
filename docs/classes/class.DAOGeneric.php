@@ -214,6 +214,8 @@ class DAOGeneric {
                 
                 if(func_num_args() > 1){
                     $arguments = func_get_args();
+                    
+                    // TODO: deal with types not supplied
                     for($a = 0; $a < count($Params); $a++){
                         $oDataSet->bindValue(
                                 $Params[a]['key']
@@ -226,14 +228,14 @@ class DAOGeneric {
                 $oDataSet->closeCursor();
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'Query'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'Query'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -257,14 +259,14 @@ class DAOGeneric {
             
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'Execute'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'Execute'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -312,20 +314,20 @@ class DAOGeneric {
         $result = 0; // null result
         try{
             if($this->_Ready){
-                $sql = "SELECT * FROM " . $this->_DatabaseName . '.' . $this->_TableName;
+                $sql = 'SELECT * FROM ' . $this->_DatabaseName . '.' . $this->_TableName;
             
                 // TODO: work starts here
             
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'GetAll'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'GetAll'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -343,20 +345,20 @@ class DAOGeneric {
         $result = 0; // null result
         try{
             if($this->_Ready){
-                $sql = "SELECT * FROM " . $this->_DatabaseName . '.' . $this->_TableName;
+                $sql = 'SELECT * FROM ' . $this->_DatabaseName . '.' . $this->_TableName;
             
                 // TODO: work starts here
             
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'Insert'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'Insert'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -374,20 +376,23 @@ class DAOGeneric {
         $result = 0; // null result
         try{
             if($this->_Ready){
-                $sql = "UPDATE " . $this->_DatabaseName . '.' . $this->_TableName ." SET A=B";
+                $sql = 'UPDATE ' . $this->_DatabaseName . '.' . $this->_TableName 
+                        .' SET ' ; 
+                // something to something 
+                // where something is something
             
                 // TODO: work starts here
             
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'Update'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'Update'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -396,7 +401,7 @@ class DAOGeneric {
     }
     
     /**
-     * Gets all records in the current Database Table
+     * Deletes all records in the current Database Table matching ID
      * @param
      * @example $DAOGeneric->Delete();
      * @return array result
@@ -405,20 +410,22 @@ class DAOGeneric {
         $result = 0; // null result
         try{
             if($this->_Ready){
-                $sql = "DELETE * FROM " . $this->_DatabaseName . '.' . $this->_TableName;
+                $sql = 'DELETE * FROM ' 
+                    . $this->_DatabaseName . '.' . $this->_TableName
+                    . ' WHERE ' . $ID . ' = ' . $Value;
             
                 // TODO: work starts here
             
             }else{
                 $this->_Log(array(
-                    'method' => 'CountAll'
+                    'method' => 'Delete'
                     , 'severity' => 'warning'
                     , 'text' => 'DAOGeneric is not yet configured.'
                 ));
             }
         } catch (Exception $oException) {
             $this->_Log(array(
-                'method' => 'CountAll'
+                'method' => 'Delete'
                 , 'severity' => 'error'
                 , 'text' => '' . $oException
             ));
@@ -520,7 +527,7 @@ class DAOGeneric {
             }
         } catch (Exception $oException) {
                 $this->_Log(array(
-                    'method' => '_InferPDOParam'
+                    'method' => 'InferPDOParam'
                     , 'severity' => 'error'
                     , 'text' => '' . $oException
                 ));
@@ -640,7 +647,7 @@ class DAOGeneric {
 
     /**
      * Used for managing logging
-     * @param none
+     * @param (array)LogInformation
      * @example $this->_Log(array(
      *       'method' => '_Log'
      *      ,'severity' => 'error'
@@ -674,10 +681,9 @@ class DAOGeneric {
     }
 
     /**
-     * Class Constructor
-     * @param none
-     * @example $X = new DAOGeneric();
-     * @return (object)instance
+     * Checks to see if the class is ready to use
+     * @example $this->_IsReady();
+     * @return (boolean)result
      */
     private function _IsReady(){
             $result = false;
