@@ -201,31 +201,80 @@ class DAOGeneric {
     /**
      * Run SQL with a expected result set (such as SELECT)
      * @param (string)$SQL
-     * @param (array)$Params [optional]
-     * @example $DAOGeneric->Query();
+     * @param (array)$Params [optional] 2D array; 
+     *     i.e. array(array('name'=>'id','value'=>1),array(array('name'=>'firstname','value'=>'Bob')), ... )
+     * @example $DAOGeneric->Query('SELECT * FROM db.tblname');
+     * @example $DAOGeneric->Query('SELECT * FROM db.tblname WHERE id = :id', array(array('name'=>'id','value'=>1)) ); 
      * @return array result
      */
     public function Query( $SQL ){
+        
         $result = array(); // null result
+        $index = 0;        
+        
         try{
-            if($this->_Ready){    
+            if($this->_Ready){   
                 
-                $oDataSet = $this->_oDatabase->SessionGet()->prepare($SQL);
+                $oDataSet; // call here for garbage collection reasons
                 
-                if(func_num_args() > 1){
-                    $arguments = func_get_args();
-                    
-                    // TODO: deal with types not supplied
-                    for($a = 0; $a < count($Params); $a++){
-                        $oDataSet->bindValue(
-                                $Params[a]['key']
-                                , $Params[a]['value']
-                                , $Params[a]['type']
-                        );
+                try{
+                    $oDataSet = $this->_oDatabase->SessionGet()->prepare($SQL);
+
+                    // Emulate Overload to get the Parameter's 2D array
+                    if(func_num_args() > 1){
+                        $arguments = func_get_args();
+                        $Params = $arguments[0];
+
+                        for($a = 0; $a < count($Params); $a++){
+                            $_param_type;
+                            if( array_key_exists('name', $Params[$a]) && array_key_exists('value', $Params[$a]) ){
+
+                                // Is the Param data type supplied or must we infer it?
+                                if( array_key_exists('name', $Params[$a]) ){
+                                    $param_type = $this->_oDTO->Columns[$_dto_column]['pdo_param'];
+
+                                }else{
+                                    $param_type = $this->_InferPDOParam($_param_value);
+
+                                }
+
+                                $oDataSet->bindValue(
+                                        (':' . $Params[a]['name'])
+                                        , $Params[a]['value']
+                                        , $this->PDO_PARAM_Get( $_param_type )
+                                );
+
+                            }else{
+
+                                $this->_Log(array(
+                                    'method' => 'Query'
+                                    , 'severity' => 'warning'
+                                    , 'text' => 'Insufficent data to set Parameter.'
+                                ));
+                            }
+                        }
                     }
+
+                    $oDataSet->execute();
+                    $oDataSet->setFetchMode(PDO::FETCH_ASSOC);
+                    
+                    // Fetch resulting data
+                    while ($row = $oDataSet->fetch()) {
+                            $result[$index] = $row;
+                            $index++;
+                    }
+                    
+                } catch (Exception $oException) {
+                    $this->_Log(array(
+                        'method' => 'Query'
+                        , 'severity' => 'warning'
+                        , 'text' => 'Error running SQL Query or retrieving data.'
+                    ));
                 }
                 
+                // Garbage collection outside try catch for safety.
                 $oDataSet->closeCursor();
+                
             }else{
                 $this->_Log(array(
                     'method' => 'Query'
@@ -248,15 +297,68 @@ class DAOGeneric {
      * @param (string)$SQL
      * @param (array)$Params [optional]
      * @example $DAOGeneric->Execute();
-     * @return int result 
+     * @return (int)result: 1 = success, 0 = failure
      */
     public function Execute( $SQL ){
+        
         $result = 0; // null result
         try{
             if($this->_Ready){
-            
-                // TODO: work starts here
-            
+                
+                $oDataSet; // call here for garbage collection reasons
+                
+                try{
+                    $oDataSet = $this->_oDatabase->SessionGet()->prepare($SQL);
+
+                    // Emulate Overload to get the Parameter's 2D array
+                    if(func_num_args() > 1){
+                        $arguments = func_get_args();
+                        $Params = $arguments[0];
+
+                        for($a = 0; $a < count($Params); $a++){
+                            $_param_type;
+                            if( array_key_exists('name', $Params[$a]) && array_key_exists('value', $Params[$a]) ){
+
+                                // Is the Param data type supplied or must we infer it?
+                                if( array_key_exists('name', $Params[$a]) ){
+                                    $param_type = $this->_oDTO->Columns[$_dto_column]['pdo_param'];
+
+                                }else{
+                                    $param_type = $this->_InferPDOParam($_param_value);
+
+                                }
+
+                                $oDataSet->bindValue(
+                                        (':' . $Params[a]['name'])
+                                        , $Params[a]['value']
+                                        , $this->PDO_PARAM_Get( $_param_type )
+                                );
+
+                            }else{
+
+                                $this->_Log(array(
+                                    'method' => 'Query'
+                                    , 'severity' => 'warning'
+                                    , 'text' => 'Insufficent data to set Parameter.'
+                                ));
+                            }
+                        }
+                    }
+
+                    $oDataSet->execute();
+
+                } catch (Exception $oException) {
+                    $this->_Log(array(
+                        'method' => 'Execute'
+                        , 'severity' => 'warning'
+                        , 'text' => 'Error running SQL Query.'
+                    ));
+                }
+                
+                // Garbage collection outside try catch for safety.
+                unset($oDataSet);
+                $result = 1;
+           
             }else{
                 $this->_Log(array(
                     'method' => 'Execute'
@@ -535,6 +637,40 @@ class DAOGeneric {
         return $result;
     }
     
+    /**
+     * Evaluates the pdo type the function call gets the PDO::PARAM_*
+     * of the matching type. if unknown assumes string
+     * @param (string)$PDO_Type
+     * @example $DAOGeneric->PDO_PARAM_Get($Value);
+     * @return (string)PDO:PARAM, default: 'PDO::PARAM_STR'
+     * 
+     */
+    public function PDO_PARAM_Get($PDO_Type) {
+        $result;
+        try{
+            switch($PDO_Type){
+                case 'PDO::PARAM_BOOL': $result = PDO::PARAM_BOOL;
+                        break;
+                case 'PDO::PARAM_NULL': $result = PDO::PARAM_NULL;
+                        break;
+                case 'PDO::PARAM_INT': $result = PDO::PARAM_INT;
+                        break;
+                case 'PDO::PARAM_LOB': $result = PDO::PARAM_LOB;
+                        break;
+                case 'PDO::PARAM_STR': $result = PDO::PARAM_STR;
+                        break;
+                default: $result = PDO::PARAM_STR;
+                        break;
+            }
+        }catch(Exception $oException){
+            $this->_Log(array(
+                'method' => 'PDO_PARAM_Get'
+                , 'severity' => 'error'
+                , 'text' => '' . $oException
+            ));
+        }
+        return $result;
+    }
     // ---------------------------------------------------------------
     //                     CLASS MECHANICS
     // ---------------------------------------------------------------
